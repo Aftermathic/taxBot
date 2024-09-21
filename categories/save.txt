@@ -1,0 +1,12 @@
+def giveMoney(userid, amount):
+if "balances" in db.keys():
+    dictionary = db["balances"]
+    currentBalance = dictionary.get(str(userid), 0)
+    dictionary[str(userid)] = currentBalance + amount
+
+    db["balances"] = dictionary
+else:
+    db["balances"] = {
+        str(userid): amount,
+        "bank": 100000
+    }     
