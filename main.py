@@ -24,7 +24,7 @@ all_channels = {
 
 all_roles = {
     "registered": 1280323463835418700,
-    "citizen": 1292653837705936978,
+    "citizen": 1279494926912196668,
     "border control": 1279500094370086943,
     "candidates": 1281395892284297277,
     "vice president": 1279560073462419457,
@@ -209,7 +209,7 @@ async def giveCitizenship(ctx, user: discord.Member = None):
             
         try:
             await user.add_roles(role)
-        except :
+        except:
             await ctx.send(f"{ctx.author.mention}, something went wrong. Try again another time.")
         else:
             await ctx.send(f"{ctx.author.mention}, {user.name} has been allowed in the country.")
