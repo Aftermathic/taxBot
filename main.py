@@ -19,7 +19,8 @@ def format_currency(amount):
 all_channels = {
     "rewards": 1292534768491171891,
     "payday": 1281055783118835722,
-    "welcome": 1292285669158158376
+    "welcome": 1292285669158158376,
+    "questions": 1282425505450164336
 }
 
 all_roles = {
@@ -59,6 +60,21 @@ async def on_message(message):
         await channel.send(f"{message.author.name}, you have been given **5¢**, for chatting.")
 
     await bot.process_commands(message)
+
+@bot.command(help="Ask the candidates, current president, and vice president questions that you would like to know the answer to.")
+async def askQuestion(ctx, *, question):
+    role = ctx.guild.get_role(all_roles["candidates"])
+    role2 = ctx.guild.get_role(all_roles["president"])
+    role3 = ctx.guild.get_role(all_roles["vice president"])
+    
+    if not question.endswith('?'):
+        question += "?"
+        
+    channel = bot.get_channel(all_channels["questions"])
+    await channel.send(f"{role.mention} {role2.mention} {role3.mention} A citizen has asked, **{question}**")
+    await ctx.send(f"{ctx.author.mention}, your question has been sent. Check {channel.mention} for your answer.")
+    
+    await ctx.message.delete()
 
 @bot.command(help="See who's winning the election! (still in testing...)")
 async def polls(ctx):
