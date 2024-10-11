@@ -3,6 +3,26 @@ from replit import db
 def clearDatabase():
     db.clear()
 
+def getPaydays(userid):
+    if ("paydays" in db.keys()):
+        paydays = db["paydays"]
+        return paydays[userid]
+    else:
+        db["paydays"] = {
+            str(userid): [[]]
+        }
+        
+        return [[]]
+
+def setupPaydays(userid, amount, date):
+    if ("paydays" in db.keys()):
+        paydays = db["paydays"]
+        return paydays[userid]
+    else:
+        db["paydays"] = {
+            str(userid): [[amount, date]]
+        }
+
 def getVotes():
     if ("votes" in db.keys()):
         return db["votes"]

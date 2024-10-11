@@ -11,6 +11,8 @@ intents.members = True
 # db.clear()
 # above is to clear database, if you're not president
 
+print(os.getenv("REPLIT_DB_URL"))
+
 bot = commands.Bot(command_prefix=">", intents=intents, help_command=None)
 
 def format_currency(amount):
@@ -32,8 +34,25 @@ all_roles = {
     "president": 1279490327622713374,
 
     # jobs, hopefully will be worked on soon
-    "army": 1280669829774315540
+    "army": 1280669829774315540,
+
+    # political stances
+    "communist": 1279560643753808034,
+    "anarchist": 1279560793981059195,
+    "democrat": 1279560829687169035,
+    "republican": 1279560853867335761,
+    "nazi": 1279560967985958978,
+    "independent": 1279560913933832214
 }
+
+politcal_stances = [
+    all_roles["communist"],
+    all_roles["anarchist"],
+    all_roles["democrat"],
+    all_roles["republican"],
+    all_roles["nazi"],
+    all_roles["independent"]
+]
 
 all_jobs = { # "job_name": [payout, role]   payout is every week
     "army": [490, all_roles["army"]]
@@ -76,7 +95,7 @@ async def askQuestion(ctx, *, question):
     
     await ctx.message.delete()
 
-@bot.command(help="See who's winning the election! (still in testing...)")
+@bot.command(help="See who's winning the election! (possibly will be used in the future)")
 async def polls(ctx):
     polls = database.getVotes()
     if (polls == "None"):
@@ -111,7 +130,7 @@ async def polls(ctx):
 
             await ctx.send(message)
         
-@bot.command(help="Vote for the next president. (still in testing...)")
+@bot.command(help="Vote for the next president. (possibly will be used in the future)")
 async def vote(ctx, whichone: int = 99999):
     candidates = []
     role = ctx.guild.get_role(all_roles["candidates"])
@@ -189,6 +208,55 @@ async def clearEverything(ctx):
     else:
         await ctx.send(f"{ctx.author.mention}, you are not allowed to do that.")
 
+@bot.command(help="Use this command to request to enter primaries, if you win, you will have a chance of becoming president. (testing in progress)")
+async def enterPrimaries(ctx):
+    file = "requests.txt"
+    userid = str(ctx.author.id)
+    stance = None
+    
+    political_stance_found = False
+    for stance_role_id in politcal_stances:
+        role = discord.utils.get(ctx.author.roles, id=stance_role_id)
+
+        if role:
+            stance = role.name 
+            break
+
+    independent = discord.utils.get(ctx.author.roles, id=all_roles["independent"])
+            
+    if (stance == None):
+        await ctx.send(f"{ctx.author.mention}, you must have a political stance to enter primaries.")
+        return
+    elif discord.utils.get(ctx.author.roles, id=all_roles["independent"]):
+        await ctx.send(f"{ctx.author.mention}, you don't need to enter primaries as you are an independent.")
+        return
+
+    if not os.path.exists(file):
+        with open(file, "w") as f:
+            pass
+
+    with open(file, "r") as f:
+        lines = f.readlines()
+
+    user_found = False
+    for line in lines:
+        if userid in line:
+            status = line.split(" - ")[0]
+            if status == "A":
+                await ctx.send(f"{ctx.author.mention}, you have already been approved into primaries.")
+            elif status == "NA":
+                await ctx.send(f"{ctx.author.mention}, you were not approved. You can ask high ranking officials for a reason why.")
+            elif status == "NR":
+                await ctx.send(f"{ctx.author.mention}, your request has not been approved yet.")
+                
+            user_found = True
+            break
+
+    if not user_found:
+        with open(file, "a") as f:
+            f.write(f"NR - {userid}\n{stance}\n")
+        await ctx.send(f"{ctx.author.mention}, your request has been sent for review.")
+
 @bot.command(help="Use this command to register to vote.")
 async def registerToVote(ctx):
     member = ctx.guild.get_member(ctx.author.id)
@@ -220,7 +288,7 @@ async def giveCitizenship(ctx, user: discord.Member = None):
         return
 
     if (border_control in member.roles):
-        if (role in member.roles):
+        if (role in user.roles):
             await ctx.send(f"{ctx.author.mention}, they are already a citizen.")
             
         try:
