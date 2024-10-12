@@ -32,6 +32,7 @@ all_roles = {
     "candidates": 1281395892284297277,
     "vice president": 1279560073462419457,
     "president": 1279490327622713374,
+    "primaries organizer": 1294736444820029521,
 
     # jobs, hopefully will be worked on soon
     "army": 1280669829774315540,
@@ -60,6 +61,8 @@ all_jobs = { # "job_name": [payout, role]   payout is every week
 
 @bot.event
 async def on_ready():
+    activity = discord.Game(name="with your money...")
+    await bot.change_presence(status=discord.Status.online, activity=activity)
     print(f"Logged in as {bot.user}")
 
 @bot.event
@@ -208,23 +211,68 @@ async def clearEverything(ctx):
     else:
         await ctx.send(f"{ctx.author.mention}, you are not allowed to do that.")
 
-@bot.command(help="Use this command to request to enter primaries, if you win, you will have a chance of becoming president. (testing in progress)")
+@bot.command(help="For primary organizers only. Use this to see who is approved to enter the primary.")
+async def getPrimaryRequests(ctx):
+    file = "requests.txt"
+    member = ctx.guild.get_member(ctx.author.id)
+    role = ctx.guild.get_role(all_roles["primaries organizer"])
+    message = "**Candidates that have been approved:**\n"
+    
+    if (role in member.roles):
+        if not os.path.exists(file):
+            with open(file, "w") as f:
+                pass
+
+        with open(file, "r") as f:
+            lines = f.readlines()
+
+        for line in lines:
+            details = line.split(" - ")
+            status = details[0]
+            if status == "A":
+                candidate = ctx.guild.get_member(int(details[1]))
+                party = details[2]
+                message += f"**{candidate.name}** - **{party}**\n"
+
+        message += "\n**Candidates to be approved:**\n"
+
+        for line in lines:
+            details = line.split(" - ")
+            status = details[0]
+            if status == "NR":
+                candidate = ctx.guild.get_member(int(details[1]))
+                party = details[2]
+                message += f"**{candidate.name}** - **{party}**\n"
+
+
+        message += "\n**Candidates that are not approved:**\n"
+
+        for line in lines:
+            details = line.split(" - ")
+            status = details[0]
+            if status == "NA":
+                candidate = ctx.guild.get_member(int(details[1]))
+                party = details[2]
+                reason = details[3]
+                message += f"**{candidate.name}** - **{party}** - {reason}\n"
+            
+        await ctx.author.send(f"{message}")
+    else:
+        await ctx.send(f"{ctx.author.mention}, you don't organize primaries.")
+
+@bot.command(help="Use this command to request to enter primaries, if you win, you will have a chance of becoming president.")
 async def enterPrimaries(ctx):
     file = "requests.txt"
     userid = str(ctx.author.id)
     stance = None
-    
-    political_stance_found = False
+
     for stance_role_id in politcal_stances:
         role = discord.utils.get(ctx.author.roles, id=stance_role_id)
-
         if role:
-            stance = role.name 
+            stance = role.name
             break
 
-    independent = discord.utils.get(ctx.author.roles, id=all_roles["independent"])
-            
-    if (stance == None):
+    if stance is None:
         await ctx.send(f"{ctx.author.mention}, you must have a political stance to enter primaries.")
         return
     elif discord.utils.get(ctx.author.roles, id=all_roles["independent"]):
@@ -241,21 +289,24 @@ async def enterPrimaries(ctx):
     user_found = False
     for line in lines:
         if userid in line:
-            status = line.split(" - ")[0]
+            details = line.split(" - ")
+            status = details[0]
             if status == "A":
                 await ctx.send(f"{ctx.author.mention}, you have already been approved into primaries.")
             elif status == "NA":
-                await ctx.send(f"{ctx.author.mention}, you were not approved. You can ask high ranking officials for a reason why.")
+                reason = details[3] if len(details) > 3 else "No reason provided."
+                await ctx.send(f"{ctx.author.mention}, you were not approved for the primaries. Reason: {reason}")
             elif status == "NR":
                 await ctx.send(f"{ctx.author.mention}, your request has not been approved yet.")
-                
+
             user_found = True
             break
 
     if not user_found:
         with open(file, "a") as f:
-            f.write(f"NR - {userid}\n{stance}\n")
+            f.write(f"NR - {userid} - {stance}\n")
         await ctx.send(f"{ctx.author.mention}, your request has been sent for review.")
+
 
 @bot.command(help="Use this command to register to vote.")
 async def registerToVote(ctx):
