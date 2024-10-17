@@ -132,6 +132,20 @@ async def polls(ctx):
                 message += f"{cand}: {count} votes\n"
 
             await ctx.send(message)
+
+@bot.command(help="Only for the president, starts an election between candidates.")
+async def startElection(ctx):
+    role = ctx.guild.get_role(all_roles["president"])
+    if (role in ctx.author.roles):
+        await ctx.send(f"**{ctx.author.mention}**, election has started!")
+        db["electionstate"] = True
+
+@bot.command(help="Only for the president, ends a current election.")
+async def endElection(ctx):
+    role = ctx.guild.get_role(all_roles["president"])
+    if (role in ctx.author.roles):
+        await ctx.send(f"**{ctx.author.mention}**, election has been ended.")
+        db["electionstate"] = False
         
 @bot.command(help="Vote for the next president. (possibly will be used in the future)")
 async def vote(ctx, whichone: int = 99999):
