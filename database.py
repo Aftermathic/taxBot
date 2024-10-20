@@ -3,6 +3,12 @@ from replit import db
 def clearDatabase():
     db.clear()
 
+def getPresidentBalance():
+    return db["presBal"]
+
+def setTax(amount):
+    db["tax"] = amount
+
 def getPaydays(userid):
     if ("paydays" in db.keys()):
         paydays = db["paydays"]
@@ -28,6 +34,9 @@ def getVotes():
         return db["votes"]
     else:
         return "None"
+
+def clearVotes():
+    db["votes"] = {}
 
 def votes(userid, vote):
     if ("votes" in db.keys()):
@@ -62,6 +71,13 @@ def getRunningMate(userid):
     else:
         return False
 
+def getAllBalances():
+    if ("balances" in db.keys()):
+        return db["balances"]
+    else:
+        db["balances"] = {}
+        return db["balances"]
+        
 def getBalance(userid):
     balances = None
     if ("balances" in db.keys()):

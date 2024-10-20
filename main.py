@@ -22,9 +22,21 @@ all_channels = {
     "rewards": 1292534768491171891,
     "payday": 1281055783118835722,
     "welcome": 1292285669158158376,
-    "questions": 1282425505450164336
+    "questions": 1282425505450164336,
+    "changes": 1297261399369711686,
+    "tax": 1281002101044023422
 }
 
+def taxEveryone():
+    everyone = database.getAllBalances()
+    for user in everyone:
+        amount = database.getBalance(user)
+        taxed = amount * db["tax"]
+        database.subtractFromBalance(user, taxed)
+
+#channel = bot.get_channel(all_channels["tax"])
+#await channel.send(f"@everyone, you have been taxed!")
+    
 all_roles = {
     "registered": 1280323463835418700,
     "citizen": 1279494926912196668,
@@ -33,6 +45,7 @@ all_roles = {
     "vice president": 1279560073462419457,
     "president": 1279490327622713374,
     "primaries organizer": 1294736444820029521,
+    "get notified": 1297262558985588847,
 
     # jobs, hopefully will be worked on soon
     "army": 1280669829774315540,
@@ -82,6 +95,36 @@ async def on_message(message):
         await channel.send(f"{message.author.name}, you have been given **5¢**, for chatting.")
 
     await bot.process_commands(message)
+
+@bot.command(help="Only for the president, set the new tax rate.")
+async def setTaxRate(ctx, tax: float):
+    president = ctx.guild.get_role(all_roles["president"])
+    get_notified = ctx.guild.get_role(all_roles["get notified"])
+    if (president in ctx.author.roles):
+        translated = None
+        domulti = False
+        try:
+            if (tax >= 1):
+                translated = tax/100
+                domulti = True
+            else:
+                translated = tax
+                domulti = False
+                
+        except:
+            await ctx.send(f"{ctx.author.mention}, you've typed in an invalid tax rate after the command. Try again, for example, `>setTaxRate 10` or `>setTaxRate 0.10` (will set the tax to 10%)")
+        else:
+            channel = bot.get_channel(all_channels["changes"])
+            if (domulti):
+                database.setTax(translated)
+                await ctx.send(f"{ctx.author.mention}, the tax rate has been set to **{translated * 100}%**")
+                await channel.send(f"{get_notified.mention}, the tax rate has been set to **{translated * 100}%**")
+            else:
+                database.setTax(translated/100)
+                await ctx.send(f"{ctx.author.mention}, the tax rate has been set to **{translated}%**")
+                await channel.send(f"{get_notified.mention}, the tax rate has been set to **{translated}%**")
+    else:
+        await ctx.send(f"{ctx.author.mention}, you are not the president.")
 
 @bot.command(help="Ask the candidates, current president, and vice president questions that you would like to know the answer to.")
 async def askQuestion(ctx, *, question):
@@ -135,6 +178,7 @@ async def polls(ctx):
 
 @bot.command(help="Only for the president, starts an election between candidates.")
 async def startElection(ctx):
+    database.clearVotes()
     role = ctx.guild.get_role(all_roles["president"])
     if (role in ctx.author.roles):
         await ctx.send(f"**{ctx.author.mention}**, election has started!")
@@ -145,10 +189,15 @@ async def endElection(ctx):
     role = ctx.guild.get_role(all_roles["president"])
     if (role in ctx.author.roles):
         await ctx.send(f"**{ctx.author.mention}**, election has been ended.")
+        database.clearVotes()
         db["electionstate"] = False
         
 @bot.command(help="Vote for the next president. (possibly will be used in the future)")
 async def vote(ctx, whichone: int = 99999):
+    if (not db["electionstate"]):
+        await ctx.send(f"{ctx.author.mention}, voting has not started yet.")
+        return
+        
     candidates = []
     role = ctx.guild.get_role(all_roles["candidates"])
     for member in ctx.guild.members:
@@ -209,6 +258,25 @@ async def help(ctx):
 @bot.command(help="Check how much money you got in your balance.")
 async def checkBalance(ctx):
     await ctx.send(f"{ctx.author.mention}, you have **{format_currency(database.getBalance(str(ctx.author.id)))}** in your balance.")
+
+@bot.command(help="Check how much money someone else has.")
+async def checkOthersBalance(ctx, id: int = None):
+    if (id is None):
+        await ctx.send(f"{ctx.author.mention}, you need to put their user ID after the command. For example, `>checkOthersBalance 139581`. If you want to get someone's userid, use `>getUserID @someone`")
+
+    try:
+        balance = format_currency(database.getBalance(str(id)))
+    except:
+        await ctx.send(f"{ctx.author.mention}, that user ID is invalid.")
+    else:
+        await ctx.send(f"{ctx.author.mention}, that person has **{balance}** in their balance.")
+
+@bot.command(help="Find someone's user ID!")
+async def getUserID(ctx, user: discord.Member = None):
+    if (user is None):
+        await ctx.send(f"{ctx.author.mention}, you need to ping someone after the command to get their userid.")
+    else:
+        await ctx.send(f"{ctx.author.mention}, their user id is `{user.id}`")
 
 @bot.command(help="Clear roles, debts, everyone's balance, everything. Only availible to the president.")
 async def clearEverything(ctx):
