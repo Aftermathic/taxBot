@@ -2,6 +2,7 @@ import os
 import discord
 from discord.ext import commands
 import database
+from datetime import datetime
 from replit import db
 
 intents = discord.Intents.default()
@@ -34,8 +35,18 @@ def taxEveryone():
         taxed = amount * db["tax"]
         database.subtractFromBalance(user, taxed)
 
-#channel = bot.get_channel(all_channels["tax"])
-#await channel.send(f"@everyone, you have been taxed!")
+def get_last_tax_date():
+    if not os.path.exists("taxrecords.txt"):
+        return None
+
+    with open("taxrecords.txt", "r") as f:
+        last_date = f.read().strip()
+        return datetime.strptime(last_date, "%Y-%m-%d")
+
+def set_last_tax_date():
+    today = datetime.now().strftime("%Y-%m-%d")
+    with open("taxrecords.txt", "w") as f:
+        f.write(today)
     
 all_roles = {
     "registered": 1280323463835418700,
@@ -87,6 +98,19 @@ async def on_command_error(ctx, error):
 async def on_message(message):
     if message.author.bot:
         return
+
+    today = datetime.now()
+
+    last_tax_date = get_last_tax_date()
+
+    if today.day == 1 and (last_tax_date is None or last_tax_date.month != today.month or last_tax_date.year != today.year):
+        taxEveryone()
+        channela = bot.get_channel(all_channels["tax"])
+        channelb = bot.get_channel(all_channels["changes"])
+        await channela.send(f"@citizen, everyone has been taxed! For the current tax rate, you can check {channelb.mention}")
+
+        # Update the last taxed date
+        set_last_tax_date()
         
     isCitizen = discord.utils.get(message.author.roles, id=all_roles["citizen"])
     if (isCitizen):
