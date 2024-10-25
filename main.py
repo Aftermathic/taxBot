@@ -29,25 +29,16 @@ all_channels = {
 }
 
 def taxEveryone():
+    saved = []
     everyone = database.getAllBalances()
     for user in everyone:
         amount = database.getBalance(user)
         taxed = amount * db["tax"]
         database.subtractFromBalance(user, taxed)
+        saved.append([int(user), taxed])
 
-def get_last_tax_date():
-    if not os.path.exists("taxrecords.txt"):
-        return None
+    return saved
 
-    with open("taxrecords.txt", "r") as f:
-        last_date = f.read().strip()
-        return datetime.strptime(last_date, "%Y-%m-%d")
-
-def set_last_tax_date():
-    today = datetime.now().strftime("%Y-%m-%d")
-    with open("taxrecords.txt", "w") as f:
-        f.write(today)
-    
 all_roles = {
     "registered": 1280323463835418700,
     "citizen": 1279494926912196668,
@@ -98,19 +89,6 @@ async def on_command_error(ctx, error):
 async def on_message(message):
     if message.author.bot:
         return
-
-    today = datetime.now()
-
-    last_tax_date = get_last_tax_date()
-
-    if today.day == 1 and (last_tax_date is None or last_tax_date.month != today.month or last_tax_date.year != today.year):
-        taxEveryone()
-        channela = bot.get_channel(all_channels["tax"])
-        channelb = bot.get_channel(all_channels["changes"])
-        await channela.send(f"@citizen, everyone has been taxed! For the current tax rate, you can check {channelb.mention}")
-
-        # Update the last taxed date
-        set_last_tax_date()
         
     isCitizen = discord.utils.get(message.author.roles, id=all_roles["citizen"])
     if (isCitizen):
@@ -119,6 +97,17 @@ async def on_message(message):
         await channel.send(f"{message.author.name}, you have been given **5¢**, for chatting.")
 
     await bot.process_commands(message)
+
+@bot.command(help="This command can only be used by the president. If abused, the president will be impeached.")
+async def taxAll(ctx):
+    president = ctx.guild.get_role(all_roles["president"])
+    if (president in ctx.author.roles):
+        users = taxEveryone()
+        for user in users:
+            person = ctx.guild.get_member(user[0])
+            await person.send(f"You've been taxed! You have been taxed **{format_currency(user[1])}**. If you would like to see the current tax rate, check the #changes channel in the server.**")
+    else:
+        await ctx.send(f"{ctx.author.mention}, you are not the president.")
 
 @bot.command(help="Only for the president, set the new tax rate.")
 async def setTaxRate(ctx, tax: float):
